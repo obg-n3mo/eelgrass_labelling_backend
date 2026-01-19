@@ -4,12 +4,17 @@ from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, text
 import shutil, os, uuid
 from fastapi.staticfiles import StaticFiles
-
+from fastapi.middleware.cors import CORSMiddleware
 
 # --- FastAPI app ---
 app = FastAPI()
 
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # TEMPORARY — tighten later
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # --- SQLite engine ---
 engine = create_engine("sqlite:///eelgrass.db")
