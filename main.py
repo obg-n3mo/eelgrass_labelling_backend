@@ -136,4 +136,3 @@ async def save_mask(user_id: int = Form(...), image_id: int = Form(...), file: U
 # --- Serve static files ---
 app.mount("/images", StaticFiles(directory="images"), name="images")
 app.mount("/masks", StaticFiles(directory="masks"), name="masks")
-app.mount("/", StaticFiles(directory="static", html=True), name="static")
