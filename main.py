@@ -64,13 +64,19 @@ def populate_images():
 
     IMAGE_DIR = "images"
 
+    if not os.path.exists(IMAGE_DIR):
+        print("Images directory not found")
+        return
+
     with engine.begin() as conn:
         for fname in os.listdir(IMAGE_DIR):
             if fname.lower().endswith((".jpg", ".png", ".jpeg")):
                 conn.execute(
-                    text("INSERT INTO images (filename) VALUES (:f)"),
+                    text("INSERT OR IGNORE INTO images (filename) VALUES (:f)"),
                     {"f": fname}
                 )
+
+populate_images()
 
 # --- Routes ---
 
