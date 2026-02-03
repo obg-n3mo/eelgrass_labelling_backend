@@ -1,10 +1,24 @@
-from fastapi import FastAPI, UploadFile, Form
+from fastapi import FastAPI, UploadFile, Form, HTTPException
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, text
 import shutil, os, uuid
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
+from dotenv import load_dotenv
+
+
+# --- Configuration ---
+load_dotenv()
+
+ENV = os.getenv("ENV", "dev")  # dev by default
+
+BASE_URL = (
+    os.getenv("BASE_URL")
+    if os.getenv("BASE_URL")
+    else "http://127.0.0.1:8000"
+)
+
 
 # --- FastAPI app ---
 app = FastAPI()
@@ -17,7 +31,7 @@ app.add_middleware(
 )
 
 # --- SQLite engine ---
-engine = create_engine("sqlite:///eelgrass.db")
+engine = create_engine("sqlite:///eelgrass.db", connect_args={"check_same_thread": False})
 
 # --- Create tables automatically ---
 with engine.begin() as conn:
@@ -30,7 +44,7 @@ with engine.begin() as conn:
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        filename TEXT NOT NULL
+        filename TEXT UNIQUE NOT NULL
     );
     """))
     conn.execute(text("""
@@ -43,18 +57,22 @@ with engine.begin() as conn:
     );
     """))
     conn.execute(text("""
-    CREATE TABLE IF NOT EXISTS masks (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        user_id INTEGER,
-        image_id INTEGER,
-        mask_path TEXT,
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-    );
+        CREATE TABLE IF NOT EXISTS user_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            image_id INTEGER,
+            label TEXT,
+            mask_path TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, image_id)
+        );
     """))
+
+     
+
 
 # --- Ensure storage folders exist ---
 os.makedirs("images", exist_ok=True)
-os.makedirs("masks", exist_ok=True)
 
 
 
@@ -76,52 +94,85 @@ def populate_images():
                     {"f": fname}
                 )
 
-populate_images()
-
 # --- Routes ---
 
-'''
-# Upload image
-@app.post("/upload")
-async def upload(file: UploadFile):
-    filename = f"{uuid.uuid4()}_{file.filename}"
-    path = f"images/{filename}"
-    with open(path, "wb") as buffer:
-        shutil.copyfileobj(file.file, buffer)
 
-    with engine.begin() as conn:
-        conn.execute(text("INSERT INTO images (filename) VALUES (:f)"), {"f": filename})
-
-    return {"status": "ok", "filename": filename}
-'''
 # Login
 @app.post("/login")
-def login(user: str = Form(...)):
+def login(
+    user: str = Form(...),
+    user_type: str = Form(...)  # "new" or "returning"
+):
     with engine.begin() as conn:
-        conn.execute(text("INSERT OR IGNORE INTO users (user) VALUES (:e)"), {"e": user})
-        user = conn.execute(text("SELECT id FROM users WHERE user=:e"), {"e": user}).fetchone()
-    return {"user_id": user[0]}
+        existing = conn.execute(
+            text("SELECT id FROM users WHERE user = :u"),
+            {"u": user}
+        ).fetchone()
+
+        if user_type == "new":
+            if existing:
+                raise HTTPException(status_code=400, detail="Username already taken")
+
+            conn.execute(
+                text("INSERT INTO users (user) VALUES (:u)"),
+                {"u": user}
+            )
+
+            user_id = conn.execute(
+                text("SELECT id FROM users WHERE user = :u"),
+                {"u": user}
+            ).fetchone()[0]
+
+        else:  # returning user
+            if not existing:
+                raise HTTPException(status_code=400, detail="User does not exist")
+
+            user_id = existing[0]
+
+    return {"user_id": user_id}
 
 # Get random image
-@app.get("/image") 
-def get_image():
+@app.get("/image/{user_id}")
+def get_image(user_id: int):
     with engine.begin() as conn:
-        img = conn.execute(text("SELECT id, filename FROM images ORDER BY RANDOM() LIMIT 1")).fetchone()
-    
-    if img is None:
-        return {"id": None, "url": None}
+        # pick a random image the user hasn't labelled yet
+        img = conn.execute(text("""
+            SELECT id, filename 
+            FROM images
+            WHERE id NOT IN (
+                SELECT image_id 
+                FROM user_images 
+                WHERE user_id = :u
+            )
+            ORDER BY RANDOM()
+            LIMIT 1
+        """), {"u": user_id}).fetchone()
 
-    return {"id": img[0], "url": f"/images/{img[1]}"}
+    if img:
+        return {"id": img[0], "url": f"{BASE_URL}/images/{img[1]}"}
+    
+    # user has labelled all images
+    return {"id": None, "url": None, "message": "You have labelled all images!"}
+
+
+
+
 
 # Save label
 @app.post("/label")
-def save_label(user_id: int = Form(...), image_id: int = Form(...), answer: str = Form(...)):
+def save_label(
+    user_id: int = Form(...),
+    image_id: int = Form(...),
+    label: str = Form(...)
+):
     with engine.begin() as conn:
         conn.execute(text("""
-            INSERT INTO labels (user_id, image_id, answer)
-            VALUES (:u,:i,:a)
-        """), {"u": user_id, "i": image_id, "a": answer})
-    return {"status": "saved"}
+            INSERT INTO user_images (user_id, image_id, label)
+            VALUES (:u, :i, :l)
+        """), {"u": user_id, "i": image_id, "l": label})
+
+    return {"status": "ok"}
+
 
 # Save mask
 @app.post("/mask")
@@ -140,5 +191,37 @@ async def save_mask(user_id: int = Form(...), image_id: int = Form(...), file: U
     return {"status": "saved"}
 
 # --- Serve static files ---
-app.mount("/images", StaticFiles(directory="images"), name="images")
-app.mount("/masks", StaticFiles(directory="masks"), name="masks")
+
+@app.get("/stats/{user_id}")
+def user_stats(user_id: int):
+    with engine.begin() as conn:
+        count = conn.execute(text("""
+            SELECT COUNT(*) FROM user_images WHERE user_id = :u
+        """), {"u": user_id}).fetchone()[0]
+
+    return {"count": count}
+
+@app.get("/leaderboard")
+def leaderboard():
+    with engine.begin() as conn:
+        rows = conn.execute(text("""
+            SELECT users.user, COUNT(user_images.id)
+            FROM users
+            JOIN user_images ON users.id = user_images.user_id
+            GROUP BY users.id
+            ORDER BY COUNT(user_images.id) DESC
+            LIMIT 10
+        """)).fetchall()
+
+    return [{"user": r[0], "total": r[1]} for r in rows]
+
+
+
+
+if ENV == "dev":
+    app.mount("/images", StaticFiles(directory="images"), name="images")
+
+@app.on_event("startup")
+def startup():
+    populate_images()
+
