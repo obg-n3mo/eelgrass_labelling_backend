@@ -6,7 +6,7 @@ import shutil, os, uuid
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-
+import random
 
 # --- Configuration ---
 load_dotenv()
@@ -132,27 +132,29 @@ def login(
     return {"user_id": user_id}
 
 # Get random image
-@app.get("/image/{user_id}")
-def get_image(user_id: int):
-    with engine.begin() as conn:
-        # pick a random image the user hasn't labelled yet
-        img = conn.execute(text("""
-            SELECT id, filename 
-            FROM images
-            WHERE id NOT IN (
-                SELECT image_id 
-                FROM user_images 
-                WHERE user_id = :u
-            )
-            ORDER BY RANDOM()
-            LIMIT 1
-        """), {"u": user_id}).fetchone()
+@app.get("/image")
+def get_image(user: str):
+    # get images the user has NOT labeled
+    result = conn.execute("""
+        SELECT images.id, images.filename
+        FROM images
+        LEFT JOIN labels
+        ON images.id = labels.image_id
+        AND labels.user = ?
+        WHERE labels.image_id IS NULL
+        ORDER BY RANDOM()
+        LIMIT 1
+    """, (user,)).fetchone()
 
-    if img:
-        return {"id": img[0], "url": f"{BASE_URL}/images/{img[1]}"}
-    
-    # user has labelled all images
-    return {"id": None, "url": None, "message": "You have labelled all images!"}
+    if not result:
+        return {"done": True}
+
+    image_id, filename = result
+    return {
+        "id": image_id,
+        "url": f"{R2_PUBLIC_URL}/{filename}"
+    }
+
 
 
 
