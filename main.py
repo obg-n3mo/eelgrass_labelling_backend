@@ -25,7 +25,11 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # TEMPORARY — tighten later
+    allow_origins=["https://obg-n3mo.github.io",  # your GitHub Pages site
+        "http://localhost:5500",      # local dev
+        "http://127.0.0.1:5500"
+        ],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
