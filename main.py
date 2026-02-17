@@ -34,7 +34,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --- SQLite engine ---
+# --- SQLalchemy engine ---
 engine = create_engine("sqlite:///eelgrass.db", connect_args={"check_same_thread": False})
 
 # --- Create tables automatically ---
@@ -138,25 +138,26 @@ def login(
 # Get random image
 @app.get("/image")
 def get_image(user: str):
-    # get images the user has NOT labeled
-    result = conn.execute("""
+
+    sql = text("""
         SELECT images.id, images.filename
         FROM images
         LEFT JOIN labels
-        ON images.id = labels.image_id
-        AND labels.user = ?
+            ON images.id = labels.image_id
+           AND labels.user = :user
         WHERE labels.image_id IS NULL
         ORDER BY RANDOM()
         LIMIT 1
-    """, (user,)).fetchone()
+    """)
+
+    result = conn.execute(sql, {"user": user}).fetchone()
 
     if not result:
         return {"done": True}
 
-    image_id, filename = result
     return {
-        "id": image_id,
-        "url": f"{R2_PUBLIC_URL}/{filename}"
+        "id": result.id,
+        "url": f"{R2_PUBLIC_URL}/{result.filename}"
     }
 
 
