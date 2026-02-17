@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, Form, HTTPException
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import create_engine, text
 import shutil, os, uuid
@@ -138,7 +138,6 @@ def login(
     return {"user_id": user_id}
 
 # Get random image
-from sqlalchemy import text
 
 @app.get("/image")
 def get_image(user: str):
@@ -165,7 +164,10 @@ def get_image(user: str):
 
 
 
-
+@app.get("/download-db")
+def download_db():
+    db_path = os.getenv("DB_PATH")  # make sure this points to your SQLite file
+    return FileResponse(db_path, filename="eelgrass.db")
 
 
 # Save label
