@@ -41,6 +41,54 @@ DB_PATH = os.getenv("DB_PATH", "eelgrass.db")
 engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
 
 
+def init_db():
+    DB_PATH = "eelgrass.db"  # path to your SQLite DB
+    with open("filenames.txt") as f:
+        R2_FILENAMES = [line.strip() for line in f]
+
+    with engine.connect() as conn:
+        
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user TEXT UNIQUE NOT NULL
+        );
+        """))
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            filename TEXT UNIQUE NOT NULL
+        );
+        """))
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS labels (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            image_id INTEGER,
+            answer TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        );
+        """))
+        conn.execute(text("""
+        CREATE TABLE IF NOT EXISTS user_images (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            image_id INTEGER,
+            label TEXT,
+            mask_path TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            UNIQUE(user_id, image_id)
+            );
+        """))
+
+        for fname in R2_FILENAMES:
+            # Use OR IGNORE to avoid duplicates
+            conn.execute(
+                text("INSERT OR IGNORE INTO images (filename) VALUES (:f)"),
+                {"f": fname}
+            )
+
+init_db()
 
 print("DB_PATH:", os.getenv("DB_PATH"))
 print("ENGINE:", engine.url)
