@@ -90,8 +90,7 @@ def init_db():
 
 init_db()
 
-print("DB_PATH:", os.getenv("DB_PATH"))
-print("ENGINE:", engine.url)
+print("DB PATH USED BY APP:", DB_PATH)
 
 
 # --- Create tables automatically ---
@@ -192,6 +191,13 @@ def login(
 
     return {"user_id": user_id}
 
+
+@app.get("/debug-labels")
+def debug_labels():
+    with engine.connect() as conn:
+        rows = conn.execute(text("SELECT * FROM labels")).fetchall()
+    return rows
+
 # Get random image
 
 @app.get("/image")
@@ -235,7 +241,7 @@ Script to convert to csv:
 import pandas as pd
 from sqlalchemy import create_engine
 
-engine = create_engine('sqlite:///eelgrass(1).db')
+engine = create_engine('sqlite:///eelgrass.db')
 
 query = "SELECT * FROM labels;" 
 df = pd.read_sql(query, engine)
