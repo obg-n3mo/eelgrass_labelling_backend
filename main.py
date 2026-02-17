@@ -300,11 +300,11 @@ def user_stats(user_id: int):
 def leaderboard():
     with engine.begin() as conn:
         rows = conn.execute(text("""
-            SELECT users.user, COUNT(user_images.id)
+            SELECT users.user, COUNT(labels.id)
             FROM users
             JOIN labels ON users.id = labels.user_id
             GROUP BY users.id
-            ORDER BY COUNT(user_images.id) DESC
+            ORDER BY COUNT(labels.id) DESC
             LIMIT 10
         """)).fetchall()
 
