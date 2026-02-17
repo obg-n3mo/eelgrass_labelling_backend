@@ -243,7 +243,7 @@ from sqlalchemy import create_engine
 
 engine = create_engine('sqlite:///eelgrass.db')
 
-query = "SELECT * FROM labels;" 
+query = "SELECT * FROM user_images;" 
 df = pd.read_sql(query, engine)
 output_path = "eelgrass.csv"
 df.to_csv(output_path, index=False, encoding="utf-8")
@@ -260,8 +260,8 @@ def save_label(
 ):
     with engine.begin() as conn:
         conn.execute(text("""
-            INSERT INTO user_images (user_id, image_id, label)
-            VALUES (:u, :i, :l)
+            INSERT INTO labels (user_id, image_id, answer)
+            VALUES (:u, :i, :a)
         """), {"u": user_id, "i": image_id, "l": label})
 
     return {"status": "ok"}
