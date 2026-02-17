@@ -61,14 +61,14 @@ with engine.begin() as conn:
     );
     """))
     conn.execute(text("""
-        CREATE TABLE IF NOT EXISTS user_images (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id INTEGER,
-            image_id INTEGER,
-            label TEXT,
-            mask_path TEXT,
-            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            UNIQUE(user_id, image_id)
+    CREATE TABLE IF NOT EXISTS user_images (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER,
+        image_id INTEGER,
+        label TEXT,
+        mask_path TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, image_id)
         );
     """))
 
@@ -145,17 +145,16 @@ def get_image(user: str):
         FROM images
         LEFT JOIN labels
           ON images.id = labels.image_id
-         AND labels.user = :user
+         AND labels.user_id = :user
         WHERE labels.image_id IS NULL
         ORDER BY RANDOM()
         LIMIT 1
     """)
-
     with engine.connect() as conn:
         result = conn.execute(sql, {"user": user}).fetchone()
 
     if result is None:
-        return {"done": True}
+        return {"done": True,"message": "You have labelled all images!"}
 
     return {
         "id": result.id,
