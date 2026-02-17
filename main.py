@@ -263,7 +263,7 @@ def save_label(
         conn.execute(text("""
             INSERT INTO labels (user_id, image_id, answer)
             VALUES (:u, :i, :a)
-        """), {"u": user_id, "i": image_id, "l": label})
+        """), {"u": user_id, "i": image_id, "a": label})
 
     return {"status": "ok"}
 
