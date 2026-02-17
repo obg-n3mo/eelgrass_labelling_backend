@@ -13,6 +13,8 @@ load_dotenv()
 
 ENV = os.getenv("ENV", "dev")  # dev by default
 
+R2_PUBLIC_URL = os.getenv("R2_PUBLIC_URL")
+
 BASE_URL = (
     os.getenv("BASE_URL")
     if os.getenv("BASE_URL")
