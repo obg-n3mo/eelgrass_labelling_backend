@@ -39,6 +39,11 @@ app.add_middleware(
 # --- SQLalchemy engine ---
 engine = create_engine("sqlite:///eelgrass.db", connect_args={"check_same_thread": False})
 
+
+print("DB_PATH:", os.getenv("DB_PATH"))
+print("ENGINE:", engine.url)
+
+
 # --- Create tables automatically ---
 with engine.begin() as conn:
     conn.execute(text("""
@@ -168,6 +173,26 @@ def get_image(user: str):
 def download_db():
     db_path = os.getenv("DB_PATH")  # make sure this points to your SQLite file
     return FileResponse(db_path, filename="eelgrass.db")
+
+
+'''
+Link to download database:
+
+https://eelgrass-labelling-backend.onrender.com/download-db
+
+Script to convert to csv:
+
+import pandas as pd
+from sqlalchemy import create_engine
+
+engine = create_engine('sqlite:///eelgrass.db')
+
+query = "SELECT * FROM labels;" 
+df = pd.read_sql(query, engine)
+output_path = "eelgrass.csv"
+df.to_csv(output_path, index=False, encoding="utf-8")
+print(f"Data successfully exported to {output_path}")
+'''
 
 
 # Save label
