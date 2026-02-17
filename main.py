@@ -37,7 +37,9 @@ app.add_middleware(
 )
 
 # --- SQLalchemy engine ---
-engine = create_engine("sqlite:///eelgrass.db", connect_args={"check_same_thread": False})
+DB_PATH = os.getenv("DB_PATH", "eelgrass.db")
+engine = create_engine(f"sqlite:///{DB_PATH}", connect_args={"check_same_thread": False})
+
 
 
 print("DB_PATH:", os.getenv("DB_PATH"))
