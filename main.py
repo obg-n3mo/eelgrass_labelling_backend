@@ -116,6 +116,7 @@ with engine.begin() as conn:
         timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     );
     """))
+    '''
     conn.execute(text("""
     CREATE TABLE IF NOT EXISTS user_images (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -127,7 +128,7 @@ with engine.begin() as conn:
         UNIQUE(user_id, image_id)
         );
     """))
-
+    '''
      
 
 
@@ -244,7 +245,7 @@ from sqlalchemy import create_engine
 
 engine = create_engine('sqlite:///eelgrass.db')
 
-query = "SELECT * FROM user_images;" 
+query = "SELECT * FROM labels;" 
 df = pd.read_sql(query, engine)
 output_path = "eelgrass.csv"
 df.to_csv(output_path, index=False, encoding="utf-8")
@@ -290,7 +291,7 @@ async def save_mask(user_id: int = Form(...), image_id: int = Form(...), file: U
 def user_stats(user_id: int):
     with engine.begin() as conn:
         count = conn.execute(text("""
-            SELECT COUNT(*) FROM user_images WHERE user_id = :u
+            SELECT COUNT(*) FROM lables WHERE user_id = :u
         """), {"u": user_id}).fetchone()[0]
 
     return {"count": count}
@@ -301,7 +302,7 @@ def leaderboard():
         rows = conn.execute(text("""
             SELECT users.user, COUNT(user_images.id)
             FROM users
-            JOIN user_images ON users.id = user_images.user_id
+            JOIN labels ON users.id = labels.user_id
             GROUP BY users.id
             ORDER BY COUNT(user_images.id) DESC
             LIMIT 10
