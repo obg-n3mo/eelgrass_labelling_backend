@@ -196,7 +196,8 @@ def login(
 def debug_labels():
     with engine.connect() as conn:
         rows = conn.execute(text("SELECT * FROM labels")).fetchall()
-    return rows
+    return [dict(r._mapping) for r in rows]
+
 
 # Get random image
 
