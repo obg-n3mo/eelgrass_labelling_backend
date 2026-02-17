@@ -136,23 +136,25 @@ def login(
     return {"user_id": user_id}
 
 # Get random image
+from sqlalchemy import text
+
 @app.get("/image")
 def get_image(user: str):
-
     sql = text("""
         SELECT images.id, images.filename
         FROM images
         LEFT JOIN labels
-            ON images.id = labels.image_id
-           AND labels.user = :user
+          ON images.id = labels.image_id
+         AND labels.user = :user
         WHERE labels.image_id IS NULL
         ORDER BY RANDOM()
         LIMIT 1
     """)
 
-    result = conn.execute(sql, {"user": user}).fetchone()
+    with engine.connect() as conn:
+        result = conn.execute(sql, {"user": user}).fetchone()
 
-    if not result:
+    if result is None:
         return {"done": True}
 
     return {
