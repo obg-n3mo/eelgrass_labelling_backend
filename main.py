@@ -235,7 +235,7 @@ Script to convert to csv:
 import pandas as pd
 from sqlalchemy import create_engine
 
-engine = create_engine('sqlite:///eelgrass.db')
+engine = create_engine('sqlite:///eelgrass(1).db')
 
 query = "SELECT * FROM labels;" 
 df = pd.read_sql(query, engine)
