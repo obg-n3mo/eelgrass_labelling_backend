@@ -228,12 +228,12 @@ def get_image(user: str):
     }
 
 
-'''
+
 @app.get("/download-db")
 def download_db():
     db_path = os.getenv("DB_PATH")  # make sure this points to your SQLite file
     return FileResponse(db_path, filename="eelgrass.db")
-
+'''
 
 
 Link to download database:
