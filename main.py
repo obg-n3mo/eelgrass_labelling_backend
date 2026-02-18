@@ -69,6 +69,7 @@ def init_db():
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         );
         """))
+        '''
         conn.execute(text("""
         CREATE TABLE IF NOT EXISTS user_images (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -80,7 +81,8 @@ def init_db():
             UNIQUE(user_id, image_id)
             );
         """))
-
+        '''
+        
         for fname in R2_FILENAMES:
             # Use OR IGNORE to avoid duplicates
             conn.execute(
@@ -226,14 +228,14 @@ def get_image(user: str):
     }
 
 
-
+'''
 @app.get("/download-db")
 def download_db():
     db_path = os.getenv("DB_PATH")  # make sure this points to your SQLite file
     return FileResponse(db_path, filename="eelgrass.db")
 
 
-'''
+
 Link to download database:
 
 https://eelgrass-labelling-backend.onrender.com/download-db
